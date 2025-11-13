@@ -1,0 +1,105 @@
+<!doctype html>
+<title>Emotion Detector</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+<body>
+    <h1>Face Emotion Detector</h1>
+
+    <div class="container">
+        <h2>Upload a Photo</h2>
+        <form method="post" enctype="multipart/form-data">
+            <input type="file" name="file" accept="image/*" required>
+            <br><br>
+            <input type="submit" value="Analyze Emotion">
+        </form>
+        {% if error %}
+            <p class="error">Error: {{ error }}</p>
+        {% endif %}
+    </div>
+
+    {% if filename and results and img_width and img_height %}
+        <div class="container" style="text-align: center;">
+            <h2>Image Analyzed</h2>
+
+            <div class="image-container">
+                <img id="analyzed-image"
+                     src="{{ url_for('static', filename='uploads/' + filename) }}"
+                     alt="Analyzed Face"
+                     style="max-width: 100%; height: auto; border-radius: 5px;">
+
+                {% if results.region %}
+                    {% set r = results.region %}
+
+                    <div class="face-box" style="
+                        top: {{ r.y }}px;
+                        left: {{ r.x }}px;
+                        width: {{ r.w }}px;
+                        height: {{ r.h }}px;
+                        transform-origin: 0 0;
+                        ">
+                    </div>
+                {% endif %}
+            </div>
+
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const imgElement = document.getElementById('analyzed-image');
+                    const boxElement = document.querySelector('.face-box');
+
+                    if (imgElement && boxElement) {
+                        // Wait until the image has fully loaded in the browser
+                        imgElement.onload = function() {
+                            const renderedWidth = imgElement.clientWidth;
+                            // Calculate the scale factor (rendered width / original width)
+                            const scaleFactor = renderedWidth / {{ img_width }};
+
+                            // Apply the scale factor to the box's position and size
+                            boxElement.style.transform = `scale(${scaleFactor})`;
+                            boxElement.style.display = 'block'; // Show the box
+                        };
+                        // Handle case where image loads from cache (no onload event)
+                        if (imgElement.complete) {
+                             const renderedWidth = imgElement.clientWidth;
+                             const scaleFactor = renderedWidth / {{ img_width }};
+                             boxElement.style.transform = `scale(${scaleFactor})`;
+                             boxElement.style.display = 'block';
+                        }
+                    }
+                });
+            </script>
+        </div>
+    {% endif %}
+
+    {% if results %}
+        <div class="container">
+            <h2>Analysis Results</h2>
+            <p class="success">
+                Dominant Emotion:
+                <span class="{{ results.dominant_class }}" style="font-weight: bold;">
+                    {{ results.dominant_emotion }}
+                </span>
+            </p>
+
+            <h3>Emotion Scores:</h3>
+
+            <div class="results-grid">
+                {% for emotion, score_str in results.scores.items() %}
+                    {% set score = score_str | replace('%', '') | float %}
+
+                    {% set bar_class = "bar-" ~ emotion|capitalize %}
+
+                    <div class="emotion-item">
+                        <span class="emotion-name">{{ emotion }}</span>
+                        <div class="emotion-bar-container">
+                            <div class="emotion-bar {{ bar_class }}" style="width: {{ score }}%;">
+                            </div>
+                        </div>
+                        <span class="emotion-score-value">{{ score_str }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+</body>
+</html>
